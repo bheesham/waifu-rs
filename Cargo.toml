@@ -1,0 +1,11 @@
+[package]
+name = "waifu-rs"
+version = "0.1.0"
+authors = ["Bhee <me@bheesham.com>"]
+edition = "2018"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "^0.14"
+futures = "0.3"
+rusqlite = "^0.24"
