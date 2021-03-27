@@ -1,11 +1,8 @@
-use futures::StreamExt;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use std::time::Duration;
+use hyper::Client;
+use tokio::time::sleep;
 use tokio::io;
 use tokio::sync::mpsc;
-use tokio_tungstenite::{
-    connect_async,
-    tungstenite::{Error, Result},
-};
 
 const NOTIFICATION_BUFFER_SIZE: usize = 1024;
 
@@ -19,16 +16,16 @@ pub enum Event {
 pub struct Stream {}
 
 impl Stream {
-    pub async fn start(server: String, sink: mpsc::Sender<Event>) -> Result<()> {
-        let (stream, _) = connect_async(server).await?;
-        let (tx, rx) = stream.split();
+    pub async fn start(url: String, sink: mpsc::Sender<Event>) -> Result<(), Box<dyn std::error::Error + Send + Sync>>{
+        let client = Client::new();
 
-        rx.for_each(|message| async {
-            if let Ok(data) = message {
-                println!("{:?}", data);
-            }
-        }).await;
+        loop {
+            let resp = client.get(url.parse()?).await;
 
-        Ok(())
+            println!("{:?}", resp);
+
+            sink.send(Event::Closed).await?;
+            sleep(Duration::from_secs(10)).await;
+        }
     }
 }
