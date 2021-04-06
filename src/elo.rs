@@ -76,25 +76,30 @@ impl Elo {
     }
 }
 
-#[test]
-fn test_elo_expect_draw() {
-    let white = Elo::new();
-    let black = Elo::new();
-    assert_eq!(Elo::expected(&white, &black), 0.5f32);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_elo_expect_white_should_lose() {
-    let white = Elo::with_rating(800);
-    let black = Elo::new();
-    assert!(Elo::expected(&white, &black) < 0.5f32);
-}
+    #[test]
+    fn test_elo_expect_draw() {
+        let white = Elo::new();
+        let black = Elo::new();
+        assert_eq!(Elo::expected(&white, &black), 0.5f32);
+    }
 
-#[test]
-fn test_elo_update_white_lose() {
-    let mut white = Elo::with_rating(800);
-    let white_orig = white.clone();
-    let mut black = Elo::new();
-    Elo::update_ratings(&mut black, &mut white);
-    assert!(white.rating < white_orig.rating);
+    #[test]
+    fn test_elo_expect_white_should_lose() {
+        let white = Elo::with_rating(800);
+        let black = Elo::new();
+        assert!(Elo::expected(&white, &black) < 0.5f32);
+    }
+
+    #[test]
+    fn test_elo_update_white_lose() {
+        let mut white = Elo::with_rating(800);
+        let white_orig = white.clone();
+        let mut black = Elo::new();
+        Elo::update_ratings(&mut black, &mut white);
+        assert!(white.rating < white_orig.rating);
+    }
 }

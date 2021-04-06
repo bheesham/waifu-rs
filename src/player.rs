@@ -12,9 +12,14 @@ impl Player {
     }
 }
 
-#[test]
-fn test_player_match() {
-    let white = Player::new(String::from("white"), Elo::new());
-    let black = Player::new(String::from("black"), Elo::new());
-    assert_eq!(Elo::expected(&white.rating, &black.rating), 0.5f32);
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_player_match() {
+        let white = Player::new(String::from("white"), Elo::new());
+        let black = Player::new(String::from("black"), Elo::new());
+        assert_eq!(Elo::expected(&white.rating, &black.rating), 0.5f32);
+    }
 }

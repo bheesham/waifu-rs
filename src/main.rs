@@ -3,23 +3,21 @@ mod player;
 mod state;
 mod stream;
 
-use std::time::Duration;
-use hyper::Client;
-use tokio::time::sleep;
-use tokio::sync::mpsc;
 use std::error::Error;
+use tokio::sync::mpsc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let (outbox, mut inbox) = mpsc::channel(10);
-    let url = String::from("https://www.saltybet.com/state.json").parse()?;
+    let (outbox, mut inbox) = mpsc::channel(1);
+    let url = String::from("https://www.saltybet.com/state.json");
 
-    tokio::spawn(async move {
-        stream::Stream::start(url, outbox).await;
-    });
+    let job = tokio::spawn(stream::EventStream::start(url, outbox));
 
     while let Some(event) = inbox.recv().await {
-        println!("{:?}", event);
+        println!("stream: {:?}", event);
     }
+
+    tokio::join!(job);
+
     Ok(())
 }

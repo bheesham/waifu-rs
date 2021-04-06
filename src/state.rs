@@ -51,14 +51,19 @@ impl State {
     }
 }
 
-#[test]
-fn test_put_get_player() -> Result<()> {
-    let mut state = State::new()?;
-    let player_orig = Player::new(String::from("test"), Elo::with_rating(1337));
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    state.put_player(&player_orig);
-    let player_saved = state.get_player(String::from("test"));
+    #[test]
+    fn test_put_get_player() -> Result<()> {
+        let mut state = State::new()?;
+        let player_orig = Player::new(String::from("test"), Elo::with_rating(1337));
 
-    assert_eq!(player_orig.rating.rating, player_saved.rating.rating);
-    Ok(())
+        state.put_player(&player_orig);
+        let player_saved = state.get_player(String::from("test"));
+
+        assert_eq!(player_orig.rating.rating, player_saved.rating.rating);
+        Ok(())
+    }
 }
