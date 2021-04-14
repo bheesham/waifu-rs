@@ -5,7 +5,8 @@ use std::path::Path;
 use std::result;
 
 use crate::config::Config;
-use crate::elo::Elo;
+use crate::elo::{Elo, Winner};
+use crate::game::Event;
 use crate::player::Player;
 
 /// This struct is really just a wrapper for some functions which manage storing
@@ -43,7 +44,7 @@ impl State {
             path => Connection::open(&Path::new(path))?,
         };
 
-        if let Err(_) = state.execute(include_str!("schema.sql"), params![]) {
+        if let Err(_) = state.execute_batch(include_str!("schema.sql")) {
             Err(Box::new(CouldNotCreateDatabaseConnectionError {}))
         } else {
             Ok(state)
@@ -53,7 +54,7 @@ impl State {
     /// Get the specified player or return a default `Player`.
     pub fn get_player(state: &Connection, name: &String) -> Player {
         let player = state
-            .prepare("SELECT name, rating FROM players WHERE name = :name;")
+            .prepare("SELECT name, elo FROM players WHERE name = :name;")
             .and_then(|mut stmt| {
                 stmt.query_row_named(named_params! { ":name": name}, |row| {
                     Ok(Player::new(row.get(0)?, Elo::with_rating(row.get(1)?)))
@@ -69,13 +70,34 @@ impl State {
     /// Upsert information about a `Player`.
     pub fn put_player(state: &Connection, player: &Player) {
         let _ = state.prepare(
-            "INSERT INTO players (name, rating) VALUES (:name, :rating) ON CONFLICT (name) DO UPDATE SET rating=:rating;"
+            "INSERT INTO players (name, elo) VALUES (:name, :elo) ON CONFLICT (name) DO UPDATE SET elo = :elo;"
         ).and_then(|mut stmt| {
             stmt.execute_named(named_params! {
                 ":name": player.name,
-                ":rating": player.rating.rating,
+                ":elo": player.elo.rating,
             })
         });
+    }
+
+    /// Add fight information.
+    pub fn put_event(state: &Connection, event: &Event) {
+        if let Event::Decided(winner, player_one, player_two) = event {
+            let fight = state.prepare(
+                "
+                WITH
+                    player_one(id) AS (SELECT id FROM players WHERE name = :one),
+                    player_two(id) AS (SELECT id FROM players WHERE name = :two)
+                INSERT INTO fights (ended, winner, one, two)
+                    SELECT datetime('now'), :winner, player_one.id, player_two.id FROM player_one, player_two;
+                "
+            ).and_then(|mut stmt| {
+                stmt.execute_named(named_params! {
+                    ":winner": winner,
+                    ":one": player_one,
+                    ":two": player_two,
+                })
+            });
+        }
     }
 }
 
@@ -94,7 +116,19 @@ mod tests {
         State::put_player(&state, &player_orig);
         let player_saved = State::get_player(&state, &String::from("test"));
 
-        assert_eq!(player_orig.rating.rating, player_saved.rating.rating);
+        assert_eq!(player_orig.elo.rating, player_saved.elo.rating);
+        Ok(())
+    }
+
+    #[test]
+    fn test_put_event_fail_no_player() -> result::Result<(), Box<dyn Error>> {
+        let mut config: Config = Default::default();
+        config.file_db = String::from("memory");
+
+        let state = State::new(&config)?;
+        let event = Event::Decided(Winner::One, String::from("one"), String::from("two"));
+        State::put_event(&state, &event);
+
         Ok(())
     }
 }

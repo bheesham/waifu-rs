@@ -1,3 +1,6 @@
+use rusqlite;
+use rusqlite::types::ToSqlOutput;
+use std::convert::From;
 use std::fmt;
 
 const ALGORITHM_OF: f32 = 400f32;
@@ -15,9 +18,39 @@ pub enum Winner {
     Two,
 }
 
+impl rusqlite::ToSql for Winner {
+    fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
+        Ok(ToSqlOutput::from(match self {
+            Winner::One => 1,
+            Winner::Two => 2,
+            Winner::Draw => 3,
+        }))
+    }
+}
+
+impl From<Winner> for u32 {
+    fn from(item: Winner) -> Self {
+        match item {
+            Winner::One => 1,
+            Winner::Two => 2,
+            Winner::Draw => 3,
+        }
+    }
+}
+
+impl From<u32> for Winner {
+    fn from(item: u32) -> Self {
+        match item {
+            1 => Winner::One,
+            2 => Winner::Two,
+            _ => Winner::Draw,
+        }
+    }
+}
+
 impl fmt::Display for Winner {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+        match &self {
             Winner::Draw => write!(f, "Draw"),
             Winner::One => write!(f, "One"),
             Winner::Two => write!(f, "Two"),

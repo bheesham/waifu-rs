@@ -40,13 +40,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let stream = tokio::spawn(game::Game::stream(config.url_state.clone(), outbox));
     while let Some(event) = inbox.recv().await {
         match event {
-            game::Event::Decided(winner, one_name, two_name) => {
+            game::Event::Decided(ref winner, ref one_name, ref two_name) => {
                 let mut one = State::get_player(&state, &one_name);
                 let mut two = State::get_player(&state, &two_name);
-                Elo::update_ratings(winner, &mut one.rating, &mut two.rating);
+                Elo::update_ratings(*winner, &mut one.elo, &mut two.elo);
                 println!("winner: {}; one: {}; two: {}", winner, one.name, two.name);
                 State::put_player(&state, &one);
                 State::put_player(&state, &two);
+                State::put_event(&state, &event);
             }
             _ => {}
         }
