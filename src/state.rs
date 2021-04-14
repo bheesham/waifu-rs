@@ -1,3 +1,4 @@
+use log::{error, trace, warn};
 use rusqlite::{named_params, params, Connection};
 use std::error::Error;
 use std::fmt;
@@ -45,8 +46,10 @@ impl State {
         };
 
         if let Err(_) = state.execute_batch(include_str!("schema.sql")) {
+            error!("Could not create schema.");
             Err(Box::new(CouldNotCreateDatabaseConnectionError {}))
         } else {
+            trace!("Connection created (schema was created).");
             Ok(state)
         }
     }
@@ -69,14 +72,19 @@ impl State {
 
     /// Upsert information about a `Player`.
     pub fn put_player(state: &Connection, player: &Player) {
-        let _ = state.prepare(
+        let player = state.prepare(
             "INSERT INTO players (name, elo) VALUES (:name, :elo) ON CONFLICT (name) DO UPDATE SET elo = :elo;"
         ).and_then(|mut stmt| {
+            trace!("Updating player {} -- new elo: {}", player.name, player.elo.rating);
             stmt.execute_named(named_params! {
                 ":name": player.name,
                 ":elo": player.elo.rating,
             })
         });
+
+        if let Err(error) = player {
+            warn!("Could not save player: {:?}", error);
+        }
     }
 
     /// Add fight information.
@@ -91,12 +99,17 @@ impl State {
                     SELECT datetime('now'), :winner, player_one.id, player_two.id FROM player_one, player_two;
                 "
             ).and_then(|mut stmt| {
+                trace!("Recording fight -- winner: {}, one: {}, two: {}", winner, player_one, player_two);
                 stmt.execute_named(named_params! {
                     ":winner": winner,
                     ":one": player_one,
                     ":two": player_two,
                 })
             });
+
+            if let Err(error) = fight {
+                warn!("Could not save fight: {:?}", error);
+            }
         }
     }
 }

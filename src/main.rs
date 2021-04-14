@@ -6,11 +6,15 @@ mod state;
 
 use elo::Elo;
 use state::State;
+
+use log::{info, trace};
 use std::error::Error;
 use tokio::sync::mpsc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    env_logger::init();
+
     // Read from the environment. Maybe swap this out later.
     let config = config::configure();
 
@@ -44,12 +48,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 let mut one = State::get_player(&state, &one_name);
                 let mut two = State::get_player(&state, &two_name);
                 Elo::update_ratings(*winner, &mut one.elo, &mut two.elo);
-                println!("winner: {}; one: {}; two: {}", winner, one.name, two.name);
                 State::put_player(&state, &one);
                 State::put_player(&state, &two);
                 State::put_event(&state, &event);
+                info!("winner: {}; one: {}; two: {}", winner, one.name, two.name);
             }
-            _ => {}
+            _ => {
+                info!("event: {:?}", event);
+            }
         }
     }
 
