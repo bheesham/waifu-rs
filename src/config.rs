@@ -20,7 +20,7 @@ pub fn configure() -> Config {
     let url_login = env::var("SB_LOGIN_URL").unwrap_or(String::from(
         "https://www.saltybet.com/authenticate?signin=1",
     ));
-    let url_bet = env::var("SB_STATE_URL")
+    let url_bet = env::var("SB_BET_URL")
         .unwrap_or(String::from("http://www.saltybet.com/ajax_place_bet.php"));
     let url_referer =
         env::var("SB_REFERER_URL").unwrap_or(String::from("http://www.saltybet.com/"));

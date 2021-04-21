@@ -4,10 +4,10 @@ mod game;
 mod player;
 mod state;
 
-use elo::Elo;
+use elo::{Elo, Winner};
 use state::State;
 
-use log::{info, trace};
+use log::{error, info, trace};
 use std::error::Error;
 use tokio::sync::mpsc;
 
@@ -44,6 +44,43 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let stream = tokio::spawn(game::Game::stream(config.url_state.clone(), outbox));
     while let Some(event) = inbox.recv().await {
         match event {
+            game::Event::Opened(ref one_name, ref two_name) => {
+                let one = State::get_player(&state, &one_name);
+                let two = State::get_player(&state, &two_name);
+                let expected_winner = {
+                    if Elo::expected(&one.elo, &two.elo) >= 0.5f32 {
+                        Winner::One
+                    } else {
+                        Winner::Two
+                    }
+                };
+
+                // The logic here is:
+                // 1. try placing a bet;
+                // 2. if no bet could be placed, login again;
+                // 3. place bet again;
+                // 4. if no bet could be placed, bail!
+                if let Err(_) = game::Game::place_bet(&mut client, &expected_winner, &config).await
+                {
+                    if let Ok(_) = game::Game::login(&mut client, &config).await {
+                        let _ =
+                            game::Game::place_bet(&mut client, &expected_winner, &config).await?;
+                    } else {
+                        panic!(
+                            "Cookies and credentials expired. Gotta bail to not wreak havoc on SaltyBet."
+                        );
+                    }
+                }
+
+                info!(
+                    "Placed a bet on: {}",
+                    match expected_winner {
+                        Winner::One => one.name.as_str(),
+                        Winner::Two => two.name.as_str(),
+                        _ => "Unknown?",
+                    }
+                );
+            }
             game::Event::Decided(ref winner, ref one_name, ref two_name) => {
                 let mut one = State::get_player(&state, &one_name);
                 let mut two = State::get_player(&state, &two_name);
@@ -53,9 +90,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 State::put_event(&state, &event);
                 info!("winner: {}; one: {}; two: {}", winner, one.name, two.name);
             }
-            _ => {
-                info!("event: {:?}", event);
-            }
+            _ => {}
         }
     }
 

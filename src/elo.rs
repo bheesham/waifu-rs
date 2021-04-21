@@ -28,6 +28,26 @@ impl rusqlite::ToSql for Winner {
     }
 }
 
+impl From<&Winner> for String {
+    fn from(item: &Winner) -> Self {
+        match item {
+            Winner::One => String::from("player1"),
+            Winner::Two => String::from("player2"),
+            Winner::Draw => String::from(""),
+        }
+    }
+}
+
+impl From<String> for Winner {
+    fn from(item: String) -> Self {
+        match item.as_str() {
+            "player1" => Winner::One,
+            "player2" => Winner::Two,
+            _ => Winner::Draw,
+        }
+    }
+}
+
 impl From<Winner> for u32 {
     fn from(item: Winner) -> Self {
         match item {

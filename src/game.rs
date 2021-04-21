@@ -1,11 +1,24 @@
-use reqwest::header::{HeaderMap, HeaderValue, REFERER};
+use log::{error, info, trace};
+use regex::Regex;
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE, REFERER};
 use serde::Deserialize;
+use std::error::Error;
+use std::fmt;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 
 use crate::config::Config;
 use crate::elo::Winner;
+
+#[derive(Debug)]
+struct CouldNotPlaceBetError {}
+impl Error for CouldNotPlaceBetError {}
+impl fmt::Display for CouldNotPlaceBetError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Could not place a bet.")
+    }
+}
 
 /// The different events a match can emit.
 /// N.B. this does not take into account team fights.
@@ -40,7 +53,7 @@ impl Game {
     pub async fn login(
         client: &mut reqwest::Client,
         config: &Config,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let mut headers = HeaderMap::new();
         headers.insert(
             REFERER,
@@ -63,11 +76,76 @@ impl Game {
         Ok(())
     }
 
-    pub async fn get_balance(
+    pub async fn place_bet(
+        client: &mut reqwest::Client,
+        winner: &Winner,
+        config: &Config,
+    ) -> Result<(), Box<dyn Error>> {
+        let wager = match Game::get_balance(client, config).await {
+            Ok(m) => {
+                if m >= 420_0 {
+                    m / 10
+                } else {
+                    420u32
+                }
+            }
+            _ => 420u32,
+        };
+        trace!("Betting {}", wager);
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            REFERER,
+            HeaderValue::from_str(&config.url_referer.as_str())?,
+        );
+        headers.insert(CONTENT_TYPE, HeaderValue::from_str("*/*")?);
+        headers.insert(
+            ACCEPT,
+            HeaderValue::from_str("application/x-www-form-urlencoded; charset=UTF-8")?,
+        );
+        headers.insert("X-Requested-With", HeaderValue::from_str("XMLHttpRequest")?);
+        trace!("Request headers: {:?}", headers);
+
+        let params = [
+            ("selectedplayer", String::from(winner)),
+            ("wager", wager.to_string()),
+        ];
+        trace!("Params: {:?}", params);
+
+        let response = client
+            .post(&config.url_bet)
+            .headers(headers)
+            .form(&params)
+            .send()
+            .await?;
+        trace!("Response: {:?}", response);
+
+        let status = &response.status();
+        let body = response.text().await?;
+        trace!("Body: {:?}", body);
+
+        if body.ends_with("1") {
+            Ok(())
+        } else {
+            error!("Status: {}; Body: {}", status.as_u16(), body);
+            Err(Box::new(CouldNotPlaceBetError {}))
+        }
+    }
+
+    async fn get_balance(
         client: &mut reqwest::Client,
         config: &Config,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        Ok(())
+    ) -> Result<u32, Box<dyn Error + Send + Sync>> {
+        let re = Regex::new(r#"(?m)<span class="dollar" id="balance">([0-9,]+)</span>"#)?;
+        let response = client.get(&config.url_index).send().await?;
+        let body = response.text().await?;
+
+        if let Some(money_match) = re.captures(body.as_str()) {
+            let money = &money_match[1].to_owned();
+            money.replace(",", "").parse::<u32>().or(Ok(420u32))
+        } else {
+            Ok(420)
+        }
     }
 
     /// Sends an `Event` to the `outbox` specified. We only send an event when the
@@ -75,7 +153,7 @@ impl Game {
     pub async fn stream(
         url: String,
         outbox: mpsc::Sender<Event>,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let mut current_state: State = Default::default();
         loop {
             sleep(Duration::from_secs(5)).await;
@@ -102,7 +180,7 @@ impl Game {
     async fn process_stream_event(
         state: State,
         outbox: &mpsc::Sender<Event>,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
         match state.status.as_str() {
             "locked" => {
                 outbox.send(Event::Locked).await?;
