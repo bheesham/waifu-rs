@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""
+The ids for fights, for some reason, does not increase by 1 each time. Seems
+odd. Let's make sure that all fights we've saved so far have fights associated
+with it -- i.e. we're not somehow invalidating our data.
+"""
+
+import argparse
+import logging
+import sqlite3
+
+
+log = logging.getLogger(__name__)
+
+
+def run(config: argparse.Namespace) -> None:
+    """Makes sure both players from each recorded fight exist."""
+
+    connection = sqlite3.connect(config.DATABASE)
+    fights = connection.execute(
+        """
+        SELECT one, two FROM fights;
+        """
+    )
+
+    for fight in fights:
+        one = connection.execute(
+            "SELECT * FROM players WHERE id = ?", (fight[0],)
+        ).fetchone()
+        two = connection.execute(
+            "SELECT * FROM players WHERE id = ?", (fight[1],)
+        ).fetchone()
+        assert one
+        assert two
+
+
+def main() -> None:
+    args = argparse.ArgumentParser()
+    args.add_argument("DATABASE", help="The sqlite3 database file to read.")
+    config = args.parse_args()
+    run(config)
+
+
+if __name__ == "__main__":
+    main()
