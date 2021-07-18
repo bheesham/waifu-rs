@@ -4,10 +4,10 @@ waifu-rs
 `waifu-rs` is a bot for SaltyBet which will:
 
 * make a record of the outcome matches;
-* calculate the elo of players for those matches;
-* place bets based on the elo of players.
+* calculate the Elo of players for those matches;
+* place bets based on the Elo of players.
 
-Your milage may vary. I've been stuck in the mines, though there are streaks
+Your mileage may vary. I've been stuck in the mines, though there are streaks
 where the bot will get into the millions of fake internet money.
 
 # Running
@@ -60,14 +60,14 @@ environment variable.
 
 This is the third incarnation of this bot. The first was a JS snippet which
 would randomly bet on red or blue. The second was a bot written in Clojure and,
-using elo as a heuristic for placing bets. This project is the third, and
+using Elo as a heuristic for placing bets. This project is the third, and
 probably final for now, series in the saga.
 
 From running the bot for a while I've noticed there are highs and lows because
 of the betting strategy we use. In particular, we *always* place a bet if we
 can. In reality, we should really avoid placing a bet if we're not certain of
 the outcome. The amount of money we place on a bet should probably also change,
-since we'll always try to be 10% of our current balance.
+since we'll always try to bet 10% of our current balance.
 
 If you care enough you can probably write a bot which performs much better. I
 used this project mostly as a way to learn a bit of Rust.
