@@ -10,6 +10,9 @@ waifu-rs
 Your mileage may vary. I've been stuck in the mines, though there are streaks
 where the bot will get into the millions of fake internet money.
 
+This project is mostly unmaintained. The main repository is hosted at
+[GitLab](https://gitlab.com/bheesham/waifu-rs/).
+
 # Running
 
 You'll need the following variables set in your environment:
