@@ -1,12 +1,12 @@
 use log::{error, trace, warn};
-use rusqlite::{named_params, params, Connection};
+use rusqlite::{named_params, Connection};
 use std::error::Error;
 use std::fmt;
 use std::path::Path;
 use std::result;
 
 use crate::config::Config;
-use crate::elo::{Elo, Winner};
+use crate::elo::Elo;
 use crate::game::Event;
 use crate::player::Player;
 
@@ -116,6 +116,7 @@ impl State {
 
 #[cfg(test)]
 mod tests {
+    use crate::elo::Winner;
     use super::*;
 
     #[test]

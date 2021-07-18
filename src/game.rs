@@ -1,4 +1,4 @@
-use log::{error, info, trace};
+use log::{error, trace};
 use regex::Regex;
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, CONTENT_TYPE, REFERER};
 use serde::Deserialize;
@@ -22,6 +22,7 @@ impl fmt::Display for CouldNotPlaceBetError {
 
 /// The different events a match can emit.
 /// N.B. this does not take into account team fights.
+#[allow(dead_code)]
 #[derive(Debug, PartialEq)]
 pub enum Event {
     Unknown,
@@ -50,6 +51,8 @@ struct State {
 pub struct Game {}
 
 impl Game {
+    /// Logs into SaltyBet, saving the cookies as we go along. Since we reuse the client the auth
+    /// info is available to us in subsequent requests.
     pub async fn login(
         client: &mut reqwest::Client,
         config: &Config,
@@ -76,6 +79,8 @@ impl Game {
         Ok(())
     }
 
+    /// Uses the `client` to place a bet. We should be logged in. If we're not, we'll log in again
+    /// at some point. It's fine for us if we don't always place a bet.
     pub async fn place_bet(
         client: &mut reqwest::Client,
         winner: &Winner,
@@ -132,6 +137,8 @@ impl Game {
         }
     }
 
+    /// Gets the current balance so we know how much to bet. We'll need to be logged in. If
+    /// anything goes wrong then we return a default of `420`.
     async fn get_balance(
         client: &mut reqwest::Client,
         config: &Config,

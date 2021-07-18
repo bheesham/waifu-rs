@@ -12,6 +12,7 @@ pub struct Config {
     pub url_referer: String,
 }
 
+/// Reads variables from the environment and populates the `Config` struct.
 pub fn configure() -> Config {
     let file_db = env::var("W_FILE_PATH").unwrap_or(String::from("memory"));
     let url_index = env::var("SB_INDEX_URL").unwrap_or(String::from("https://www.saltybet.com/"));

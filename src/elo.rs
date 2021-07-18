@@ -132,9 +132,6 @@ impl Elo {
         // The expected outcome for the two will be `1 - expected outcome for one`. This
         // allows us to simplify some math.
         let expected = Self::expected(&one, &two);
-        // We're able to factor `1 - expected outcome` out from the following because
-        // the equation for the two ends up looking something like
-        let one_outcome = 1f32 - expected;
 
         match winner {
             Winner::One => {

@@ -1,5 +1,6 @@
 use crate::elo::Elo;
 
+/// Container for holding player information.
 #[derive(Debug, Clone)]
 pub struct Player {
     pub name: String,
